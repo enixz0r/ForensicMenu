@@ -102,7 +102,7 @@ Function Get-Enumeration {
     $HostIPs = Read-Host 'List ALL remote IP addresses you wish to run this against? (Eg: 192.168.1.10,192.168.1.20)'
     $THip = [string]$HostIPs
     Set-Item WSMan:\localhost\Client\TrustedHosts -Value $THip -Force
-    $HostIPs = $HostIPs -replace '[,]',"`n"
+    $HostIPs = $HostIPs -split '[,]'
     $creds = Get-Credential
     $date = Get-Date -Format "dd/MM/yyyy-HH:mm:ss"
     $newdate = $date.Replace('/','-').Replace(':','-')  
@@ -112,24 +112,31 @@ Function Get-Enumeration {
         ## YES = run the following commands ##
         'Y' {
             $HostIPs | % {
+                ## All ipconfig settings ##
                 Invoke-Command -Credential $creds -ComputerName $_ -ScriptBlock {
-                    Write-Output "-------------------------------------- $using:_ Machine --------------------------------------"
-                    ## All ipconfig settings ##
                     Write-Output "-----IPCONFIG-----"
                     ipconfig /all
-                    ## All TCP & UDP connections
+                } | Out-File -FilePath "$env:USERPROFILE\Desktop\$newdate Ipconfig $_.txt"
+                ## All TCP & UDP connections
+                Invoke-Command -Credential $creds -ComputerName $_ -ScriptBlock {
                     Write-Output "`n`n-----NETSTAT-----"
                     netstat -ano
-                    ## All local processes ##
+                } | Out-File -FilePath "$env:USERPROFILE\Desktop\$newdate Netstat $_.txt"
+                ## All local processes ##
+                Invoke-Command -Credential $creds -ComputerName $_ -ScriptBlock {
                     Write-Output "`n`n-----PROCESSES-----"
                     Get-Process
-                    ## All local services and states ##
+                } | Out-File -FilePath "$env:USERPROFILE\Desktop\$newdate Processes $_.txt"
+                ## All local services and states ##
+                Invoke-Command -Credential $creds -ComputerName $_ -ScriptBlock {
                     Write-Output "`n`n-----SERVICES-----"
                     Get-Service | Select-Object Status,Name
-                    ## All local user accounts & whether or not they are enabled/disabled ##
+                } | Out-File -FilePath "$env:USERPROFILE\Desktop\$newdate Services $_.txt"
+                ## All local user accounts & whether or not they are enabled/disabled ##
+                Invoke-Command -Credential $creds -ComputerName $_ -ScriptBlock {
                     Write-Output "`n`n-----LOCAL USERS-----"
                     $cmd = try {
-                        Get-LocalUser;$true
+                        get-localuser;$true
                     }
                     catch {
                         $false
@@ -140,7 +147,9 @@ Function Get-Enumeration {
                     ELSE {
                         wmic useraccount list brief
                     }
-                    ## Who is in the local Administrators Group ##
+                } | Out-File -FilePath "$env:USERPROFILE\Desktop\$newdate LocalUsers $_.txt"
+                ## Who is in the local Administrators Group ##
+                Invoke-Command -Credential $creds -ComputerName $_ -ScriptBlock { 
                     Write-Output "`n`n-----LOCAL ADMIN GROUP-----"
                     $cmd = try {
                         Get-LocalGroupMember -Name administrators;$true
@@ -156,10 +165,12 @@ Function Get-Enumeration {
                     }
                     ELSE {
                         wmic path win32_groupuser
-                    }
+                    } 
+                } | Out-File -FilePath "$env:USERPROFILE\Desktop\$newdate LocalGroup $_.txt"
+                ## Common Run Key locations and there values ##
+                Invoke-Command -Credential $creds -ComputerName $_ -ScriptBlock {
                     Write-Output "`n`n-----REGISTRY KEYS-----"
                     ## Creates an array containing all possible Run Key locations ##
-                    Set-Variable -Name RunKeys -Value $null
                     $RunKeys = "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run\",
                     "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce\",
                     "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunServices\",
@@ -179,34 +190,34 @@ Function Get-Enumeration {
                     $RunKeys | % {
                         echo "`n$_" ((Get-Item -Path $_) | Format-Table)
                     }
-                } | Out-File -FilePath "$env:USERPROFILE\Desktop\$newdate $_.txt"
-            }
+                } | Out-File -FilePath "$env:USERPROFILE\Desktop\$newdate RegKeys $_.txt"
+            } 
         }
         ## NO = do not run the basic enumeration commands ##
         'N' {
         }
     }
-Switch ($basicenuAD) {
-    'Y' {
-        $HostIPs | % {
-            Invoke-Command -Credential $creds -ComputerName $_ -ScriptBlock {
-                ## Who are the Active Directory Users in the system ##
-                ## NOTE: This could be a very large output depending upon the size of the organisation ##
-                Write-Output "`n`n-----AD USERS-----"
-                Get-ADUser -Filter * | Select-Object Name,Enabled
-                ## Who are the Active Directory Administrators group ##
-                Write-Output "`n`n-----AD GRP MBR's ADMINS-----"
-                Get-ADGroupMember -Identity 'Administrators' | Select-Object name,objectClass
-                ## Who are the Active Directory Domain Administrators group ##
-                Write-Output "`n`n-----AD GRP MBR's DOMAIN ADMINS-----"
-                Get-ADGroupMember -Identity 'Domain Admins' | Select-Object name,objectClass
-                ## Who are the Active Directory Schema Administrators group ##
-                Write-Output "`n`n-----AD GRP MBR's SCHEMA ADMINS-----"
-                Get-ADGroupMember -Identity 'Schema Admins' | Select-Object name,objectClass
-                ## Who are the Active Directory Enterprise Administrators group ##
-                Write-Output "`n`n-----AD GRP MBR's ENTERPRISE ADMINS-----"
-                Get-ADGroupMember -Identity 'Enterprise Admins' | Select-Object name,objectClass
-                } | Out-File -Append "$env:USERPROFILE\Desktop\$newdate $_.txt"
+    Switch ($basicenuAD) {
+        'Y' {
+            $HostIPs | % {
+                Invoke-Command -Credential $creds -ComputerName $_ -ScriptBlock {
+                    ## Who are the Active Directory Users in the system ##
+                    ## NOTE: This could be a very large output depending upon the size of the organisation ##
+                    Write-Output "`n`n-----AD USERS-----"
+                    Get-ADUser -Filter * | Select-Object Name,Enabled
+                    ## Who are the Active Directory Administrators group ##
+                    Write-Output "`n`n-----AD GRP MBR's ADMINS-----"
+                    Get-ADGroupMember -Identity 'Administrators' | Select-Object name,objectClass
+                    ## Who are the Active Directory Domain Administrators group ##
+                    Write-Output "`n`n-----AD GRP MBR's DOMAIN ADMINS-----"
+                    Get-ADGroupMember -Identity 'Domain Admins' | Select-Object name,objectClass
+                    ## Who are the Active Directory Schema Administrators group ##
+                    Write-Output "`n`n-----AD GRP MBR's SCHEMA ADMINS-----"
+                    Get-ADGroupMember -Identity 'Schema Admins' | Select-Object name,objectClass
+                    ## Who are the Active Directory Enterprise Administrators group ##
+                    Write-Output "`n`n-----AD GRP MBR's ENTERPRISE ADMINS-----"
+                    Get-ADGroupMember -Identity 'Enterprise Admins' | Select-Object name,objectClass
+                } | Out-File -Append "$env:USERPROFILE\Desktop\$newdate AD $_.txt"
             }
         }
         ## NO, do not run the AD enumeration commands ##
