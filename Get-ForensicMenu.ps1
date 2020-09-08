@@ -128,9 +128,13 @@ Function Get-Enumeration {
                     Get-Service | Select-Object Status,Name
                     ## All local user accounts & whether or not they are enabled/disabled ##
                     Write-Output "`n`n-----LOCAL USERS-----"
-                    Set-Variable -Name PSversionU -Value $null
-                    $PSversionU= ((Get-Host).Version).Major
-                    IF ($PSversionU -gt 2) {
+                    $cmd = try {
+                        Get-LocalUser;$true
+                    }
+                    catch {
+                        $false
+                    }
+                    IF ($cmd) {
                         Get-LocalUser | Select-Object Name,Enabled
                     }
                     ELSE {
@@ -138,8 +142,13 @@ Function Get-Enumeration {
                     }
                     ## Who is in the local Administrators Group ##
                     Write-Output "`n`n-----LOCAL ADMIN GROUP-----"
-                    $PSversionG = ((Get-Host).Version).Major
-                    IF ($PSversionG -gt 2) {
+                    $cmd = try {
+                        Get-LocalGroupMember -Name administrators;$true
+                    }
+                    catch {
+                        $false
+                    }
+                    IF ($cmd) {
                         $LocalGroup = (Get-LocalGroup).Name
                         $LocalGroup | % {
                             Get-LocalGroupMember -Group $_
