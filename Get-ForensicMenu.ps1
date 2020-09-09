@@ -61,7 +61,6 @@ Function Get-FilePathandMD5Hash {
     Write-Host `n
     $filecheckselection = Read-Host "Is the file on a remote host? (Y or N)"
     switch ($filecheckselection) {
-        ## Run ping sweep and save to file ##
         'Y' {
             $remotehost = Read-Host "Please enter the remote host IP"
             $THip = [string]$remotehost
@@ -78,7 +77,6 @@ Function Get-FilePathandMD5Hash {
                 }
             }
         } 
-        ## Run ping sweep and output to screen ##
         'N' {
             $filename = Read-Host "Please enter the filename (eg. hack.exe)"
             'Scan Running, Please wait....'
@@ -236,7 +234,7 @@ Function Stop-RemoteProcess {
     $processname = Read-Host "Please enter the name of the process to kill (wildcards accepted)"
     $creds = Get-Credential -Message "Please enter valid username and password"
     $processselection = Read-Host "Ending a critical process can cause the host to crash. Do you want to continue? (Y or N)"
-    switch ($pingselection) {
+    switch ($processselection) {
         'Y' {
             'Kill Process Running, See below for processes killed....'
             Invoke-Command -ComputerName $processip -Credential $creds -ScriptBlock {
