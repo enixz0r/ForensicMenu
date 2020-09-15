@@ -1,4 +1,14 @@
-﻿## FUNCTION: Get-Autoruns from a remote machine ##
+## https://docs.microsoft.com/en-us/sysinternals/downloads/autoruns ##
+## Ensure you have a copy of Autorunsc  (CLI version) executable stored locally before running this script ##
+ 
+#################################################################################
+## The Function will do the following steps:                                   ##
+## 1. Copy the Autorunsc executable to the remote machine                      ##
+## 2. Run the Autorunsc command, output will include all NON Microsoft         ##
+## 3. Copy the Autorunsc file (.csv) back to the locate machine                ##
+## 4. Delete the Autorunsc .csv and executable files from the remote machine   ##
+#################################################################################
+ 
 Function Get-Autoruns {
     Clear-Host
     ## Questions, and input required from the user ##
@@ -18,9 +28,12 @@ Function Get-Autoruns {
     $LocalComputer = Read-Host "Enter the IP address of your local machine:`n`n==>"
     Clear-Host
     $Input = [System.Windows.Forms.MessageBox]::Show('Does the local & remote machine have the same username/password?', 'Local / Remote Username & Password', 'YesNo')
+    
+    ## IF the users selects YES regarding the local and remote machines having the same credentials ##
     IF ($Input -eq 'Yes') {
         $Creds = Get-Credential
     }
+    ## ELSE the users selects NO regarding the local and remote machines having the same credentials ##
     ELSE {
         Clear-Host
         [System.Windows.MessageBox]::Show('Enter the credentials for the REMOTE MACHINE - Click OK to Continue')
@@ -116,7 +129,12 @@ Function Get-Autoruns {
     }
 }
 
-
+###############
+## Main Body ##
+###############
+ 
+## Is PSRemoting enabled of the local machine? ##
+## IF it is install, run Function Get-MemDump ##
 Clear-Host
 $TestIP = (Get-NetIPConfiguration | Where-Object {$_.IPv4DefaultGateway -ne $null -and $_.NetAdapter.Status -ne "Disconnected"}).IPv4Address.IPAddress
 IF (Test-WSMan -ComputerName $TestIP -ErrorAction SilentlyContinue) {
@@ -125,15 +143,15 @@ IF (Test-WSMan -ComputerName $TestIP -ErrorAction SilentlyContinue) {
 ## IF PSRemoting is NOT installed, ENABLE it and run Function Get-MemDump ##
 ## PSRemoting will also be removed if NOT originally installed ##
 ELSE {
-Enable-PSRemoting -Force
-Get-Autoruns
-## Disable PSRemoting, and rollback ALL changes from Enable-PSRemoting ##
-Disable-PSRemoting -Force
-Remove-Item -Path 'WSMan:\Localhost\listener\listener*' -Recurse
-Get-Item -Path 'WSMan:\Localhost\listener\'
-Stop-Service -Name 'WinRM' -Force
-Get-Service -Name 'WinRM' | Select-Object Name,Status | Format-List
-Set-NetFirewallRule -DisplayName 'Windows Remote Management (HTTP-In)' -Enabled False
-Get-NetFirewallRule -DisplayName 'Windows Remote Management (HTTP-In)' | 
-    Select-Object -Property DisplayName,Profile,Enabled | Format-List
+    Enable-PSRemoting -Force
+    Get-Autoruns
+    ## Disable PSRemoting, and rollback ALL changes from Enable-PSRemoting ##
+    Disable-PSRemoting -Force
+    Remove-Item -Path 'WSMan:\Localhost\listener\listener*' -Recurse
+    Get-Item -Path 'WSMan:\Localhost\listener\'
+    Stop-Service -Name 'WinRM' -Force
+    Get-Service -Name 'WinRM' | Select-Object Name,Status | Format-List
+    Set-NetFirewallRule -DisplayName 'Windows Remote Management (HTTP-In)' -Enabled False
+    Get-NetFirewallRule -DisplayName 'Windows Remote Management (HTTP-In)' | 
+        Select-Object -Property DisplayName,Profile,Enabled | Format-List
 }
