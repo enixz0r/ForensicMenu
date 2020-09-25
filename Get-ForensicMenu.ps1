@@ -151,6 +151,14 @@ Function Get-Enumeration {
                     Get-History | Select-Object -Property *
                 } | Out-File -FilePath "$env:USERPROFILE\Desktop\$newdate History $_.txt"
                 
+                ## Get ALL Scheduled Tasks, and some basic information about them ##
+                Invoke-Command -Credential $creds -ComputerName $_ -ScriptBlock {
+                    Get-ScheduledTask | Select-Object TaskName, TaskPath, Date, Author, Actions, Triggers, Description, State | 
+                        Where-Object Author -NotLike 'Microsoft*' |
+                        Where-Object Author -NE $null |
+                        Where-Object Author -NotLike '*@%SystemRoot%\*'
+                } | Out-File -FilePath "$env:USERPROFILE\Desktop\$newdate ScheduleTask $_.txt"
+
                 ## All local user accounts & whether or not they are enabled/disabled ##
                 Invoke-Command -Credential $creds -ComputerName $_ -ScriptBlock {
                     Write-Output "`n`n-----LOCAL USERS-----"
@@ -245,7 +253,7 @@ Function Get-Enumeration {
                     Write-Output "`n`n-----AD GRP MBR's ENTERPRISE ADMINS-----"
                     Get-ADGroupMember -Identity 'Enterprise Admins' | Select-Object name,objectClass
                 } | Out-File -FilePath "$env:USERPROFILE\Desktop\$newdate AD $_.txt"
- 
+ 
                 ## GPO Report ##
                 Invoke-Command -Credential $creds -ComputerName $_ -ScriptBlock {
                     $Domain = ((Get-ADDomain).forest)
@@ -446,7 +454,7 @@ Function Get-Autoruns {
     }
     ELSE {            
     }
- 
+ 
     ## TEST and confirm the remote machine has PowerShell v5+ ##
     IF ($Creds -ne $null) {
         $Test1 = Invoke-Command -ComputerName $RemoteComputer -Credential $Creds -ScriptBlock {($PSVersionTable).PSVersion.Major -ge 5}
@@ -483,7 +491,7 @@ Function Get-Autoruns {
                 ## ELSE, do nothing ##
                 ELSE {
                 }
- 
+ 
                 $HomePC = New-PSSession -ComputerName $using:LocalComputer -Credential $using:Creds
                 Copy-Item -Path 'C:\Autorunsc64-1.csv' -Destination 'c:\' -ToSession $HomePC
                                 
@@ -716,6 +724,6 @@ do {
     }
     pause
 }
- 
+ 
 ## Press 'q' to exit the Menu and return to the PS CLI ##
 until ($selection -eq 'q')
