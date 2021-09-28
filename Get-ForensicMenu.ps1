@@ -32,7 +32,10 @@ function Get-Menu {
 Function Start-PingSweep {
     Clear-Host
     Write-Host `n
-    $iprange=Read-Host "Please enter IP range to Scan (eg. 10.10.10 or 192.168.0)"
+    Write-Host 'Please enter IP range to the 3rd octet to Scan' -ForegroundColor White -NoNewline
+    Write-Host "`0(eg. 10.10.10 or 192.168.0)" -ForegroundColor Red
+    
+    $iprange=Read-Host "Range"
     $ping = new-object System.Net.NetworkInformation.Ping
     $pingselection = Read-Host "Would you like to save Ping Results to a file? (Y or N)"
     
@@ -51,7 +54,7 @@ Function Start-PingSweep {
         'N' {
             'Your results will be displayed below'
             1..254 | % {
-                $ping.send("$iprange.$_",1) |where status -eq Success | % {
+                $ping.Send("$iprange.$_",1) |where status -eq Success | % {
                     "{0}" -f $_.Address
                 }
             }
